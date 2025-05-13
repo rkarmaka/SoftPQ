@@ -74,6 +74,7 @@ def evaluate_oversegmentation_effect(
 
     # Plot
     plt.rcParams.update({
+        'font.family': 'Times New Roman',
         'font.size': 12,
         'figure.figsize': (10, 6),
         'axes.labelsize': 14,

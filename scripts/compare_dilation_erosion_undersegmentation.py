@@ -53,17 +53,17 @@ def compare_erosion_dilation_plot():
     df_dilate = run_progressive_segmentation(operation='dilate')
     df_erode = run_progressive_segmentation(operation='erode')
 
-    # Plotting setup
+    # Plot Setup
     plt.rcParams.update({
+        'font.family': 'Times New Roman',
         'font.size': 12,
-        'figure.figsize': (12, 5),
+        'figure.figsize': (10, 6),
         'axes.labelsize': 14,
         'axes.titlesize': 14,
-        'legend.fontsize': 12,
+        'legend.fontsize': 10,
         'xtick.labelsize': 12,
         'ytick.labelsize': 12,
         'lines.linewidth': 2,
-        'lines.markersize': 6,
         'axes.grid': True,
         'grid.linestyle': '--',
         'grid.alpha': 0.7,

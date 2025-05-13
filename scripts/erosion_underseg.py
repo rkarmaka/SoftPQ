@@ -69,6 +69,7 @@ def evaluate_erosion_robustness(
     }
 
     plt.rcParams.update({
+        'font.family': 'Times New Roman',
         'font.size': 12,
         'figure.figsize': (12, 5),
         'axes.labelsize': 14,

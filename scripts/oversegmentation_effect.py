@@ -6,16 +6,16 @@ sys.path.append(os.path.abspath(""))
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
 from skimage.measure import label
 import metrics.core as metrics
 import metrics.utils as utils
 import data.synthetic_cases as synthetic_cases
-from data.synthetic_cases import relabel_segments_fixed_groups
+from data.synthetic_cases import relabel_segments_fixed_groups, create_multi_circle_image, simulate_incremental_oversegmentation
 
 
 def evaluate_oversegmentation_effect(
-    k_range=range(10,0,-1),
-    data_case='single_circle',
+    k_range,
     iou_high=0.5,
     iou_low=0.1,
     output_dir='output/figures',
@@ -24,32 +24,44 @@ def evaluate_oversegmentation_effect(
     os.makedirs(output_dir, exist_ok=True)
 
     # Load base synthetic data
-    if data_case == 'single_circle':
-        circle_mask = synthetic_cases.create_circle_mask((256, 256), 32)
-        base_mask = synthetic_cases.create_n_oversegments_from_circle(circle_mask, n=10, offset=10)
-        ground_truth = (base_mask>0).astype(np.uint8)
-        ground_truth_labels = label(ground_truth)
-    else:
-        raise ValueError(f"Unknown data_case: {data_case}")
+    base_mask = create_multi_circle_image(grid_size=5, image_size=256, radius=10)
+    ground_truth = (base_mask>0).astype(np.uint8)
+    ground_truth_labels = label(ground_truth)
 
 
     pq_values = []
     gpq_values = []
+    f1_values = []
+    mAP_values = []
 
     for k in k_range:
         # Create oversegmented prediction
-        predicted = relabel_segments_fixed_groups(base_mask, k)
+        predicted = simulate_incremental_oversegmentation(base_mask, k)
         predicted_labels = label(predicted)
 
         # Evaluate PQ and gPQ
         pq = metrics.evaluate_segmentation(ground_truth_labels, predicted_labels)['panoptic_quality']
         gpq = metrics._proposed_sqrt(ground_truth_labels, predicted_labels, iou_high=iou_high, iou_low=iou_low)
+        f1 = metrics.evaluate_segmentation(ground_truth_labels, predicted_labels)['f1']
+        mAP = metrics.average_precision(ground_truth_labels, predicted_labels)[0].mean()
 
         pq_values.append(pq)
         gpq_values.append(gpq)
+        f1_values.append(f1)
+        mAP_values.append(mAP)
+    
+    # Convert x-axis to % oversegmentation (k / total_objects)
+    total_objects = 25
+    x_percent = np.array(k_range) / total_objects * 100
 
-    # Plot
+    # Convert scores to percentages
+    pq_array = np.array(pq_values) * 100
+    gpq_array = np.array(gpq_values) * 100
+    f1_array = np.array(f1_values) * 100
+    mAP_array = np.array(mAP_values) * 100
+
     plt.rcParams.update({
+        'font.family': 'Times New Roman', 
         'font.size': 12,
         'figure.figsize': (10, 6),
         'axes.labelsize': 14,
@@ -66,24 +78,36 @@ def evaluate_oversegmentation_effect(
 
     fig, ax = plt.subplots(figsize=(10, 6))
 
-    ax.plot(k_range, pq_values, label='PQ (IoU > 0.5)', color='black', linestyle='-', linewidth=2.5)
-    ax.plot(k_range, gpq_values, label=f'gPQ (IoU 0.5–{iou_low})', linestyle='--', marker='o', color='#d62728', alpha=0.9)
+    # Fill between PQ and gPQ (now in percentage)
+    ax.fill_between(x_percent, np.minimum(pq_array, gpq_array), np.maximum(pq_array, gpq_array),
+                    color='lightgray', alpha=0.4, label='Gap between PQ and gPQ')
 
-    k = k_range[0]
-    ax.set_title(f'Effect of Oversegmentation ({k}) on PQ and gPQ')
-    ax.set_xlabel(f'Number of Oversegments ({k})')
-    ax.set_ylabel('Score')
+    # Replot lines
+    ax.plot(x_percent, pq_array, label='PQ (IoU > 0.5)', color='black', linestyle='-', linewidth=2.5)
+    ax.plot(x_percent, gpq_array, label=f'gPQ (IoU 0.5–{iou_low})', linestyle='--', marker='o', color='#d62728', alpha=0.9)
+    ax.plot(x_percent, mAP_array, label='mAP', linestyle='--', marker='o', color='#1f77b4', alpha=0.9)
+    ax.plot(x_percent, f1_array, label='F1', linestyle='--', marker='o', color='#ff7f0e', alpha=0.9)
 
-    # Shared legend below
+    ax.set_title('Effect of Oversegmentation on Segmentation Quality')
+    ax.set_xlabel('Oversegmentation (% of objects)')
+    ax.set_ylabel('Score (%)')
+    ax.set_ylim(0, 110)
+
+    # Legend (include shaded area)
+    from matplotlib.patches import Patch
+    gap_patch = Patch(facecolor='lightgray', edgecolor='gray', alpha=0.4, label='Gap between PQ and gPQ')
+
     fig.legend(
-        handles=ax.lines,
-        labels=[line.get_label() for line in ax.lines],
+        handles=[*ax.lines, gap_patch],
+        labels=[line.get_label() for line in ax.lines] + [gap_patch.get_label()],
         loc='lower center',
-        ncol=2,
+        ncol=6,
         bbox_to_anchor=(0.5, 0.1)
     )
+
     plt.tight_layout()
     plt.subplots_adjust(bottom=0.25)
+
 
     # Save with metadata
     metadata = {
@@ -102,9 +126,8 @@ def evaluate_oversegmentation_effect(
 
 if __name__ == '__main__':
     evaluate_oversegmentation_effect(
-        k_range=range(10,0,-1),
-        data_case='single_circle',
+        k_range=range(1,26),
         iou_high=0.5,
         iou_low=0.05,
-        output_filename='oversegmentation_k_effect.png'
+        output_filename='oversegmentation_effect.png'
     )

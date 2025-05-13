@@ -55,8 +55,9 @@ def compare_pq_vs_gpq_varying_iou_low(
             predicted_mask_copy = utils.erode_dilate_mask(predicted_mask_copy, operation=operation, kernel_size=1)
         gpq_curves[round(iou_low, 2)] = gpq_values
 
-    # Plot PQ + gPQ curves
+    # Plot Setup
     plt.rcParams.update({
+        'font.family': 'Times New Roman',
         'font.size': 12,
         'figure.figsize': (10, 6),
         'axes.labelsize': 14,
@@ -113,11 +114,11 @@ if __name__ == '__main__':
     compare_pq_vs_gpq_varying_iou_low(
         operation='erode',  # or 'erode'
         data_case='paired_circles',
-        output_filename='gpq_erosion_low_iou.png'
+        output_filename='spq_erosion_low_iou.png'
     )
 
     compare_pq_vs_gpq_varying_iou_low(
         operation='dilate',
         data_case='paired_circles',
-        output_filename='gpq_dilation_low_iou.png'
+        output_filename='spq_dilation_low_iou.png'
     )

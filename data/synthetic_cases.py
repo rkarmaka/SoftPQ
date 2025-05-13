@@ -112,3 +112,57 @@ def relabel_segments_fixed_groups(img: np.ndarray, k: int) -> np.ndarray:
             pred[img == original_label] = new_label
 
     return pred
+
+
+def create_multi_circle_image(grid_size=3, image_size=256, radius=20):
+    """
+    Create a synthetic image with square number of circles in a grid.
+    Returns:
+        - image: synthetic grayscale image with circles
+        - mask: labeled ground truth mask (each circle has a unique label)
+    """
+    mask = np.zeros((image_size, image_size), dtype=np.int32)
+
+    step = image_size // (grid_size + 1)
+    label = 1
+
+    for i in range(1, grid_size + 1):
+        for j in range(1, grid_size + 1):
+            center = (j * step, i * step)
+            gt = create_circle_mask((image_size, image_size), radius=radius, center=center)
+            pred = create_n_oversegments_from_circle(gt, n=2, offset=5)
+            pred[pred==1] = label
+            pred[pred==2] = label+1
+            mask = mask + pred
+            label += 2
+
+    return mask
+
+def simulate_incremental_oversegmentation(mask, num_oversegment):
+    """
+    Simulates prediction by revealing one fragment at a time.
+
+    Args:
+        mask: np.ndarray (int), fragmented ground truth
+        num_oversegment: int, how many individual segments to reveal
+
+    Returns:
+        prediction_mask: np.ndarray with:
+            - 1: the currently exposed fragment(s)
+            - 2: everything else merged
+    """
+    prediction_mask = np.zeros_like(mask, dtype=np.uint8)
+
+    all_labels = np.unique(mask)
+    all_labels = all_labels[all_labels != 0]  # exclude background
+
+    reveal_labels = sorted(all_labels)[::2][:num_oversegment]
+    other_labels = set(all_labels) - set(reveal_labels)
+
+    for label in reveal_labels:
+        prediction_mask[mask == label] = 1
+
+    for label in other_labels:
+        prediction_mask[mask == label] = 2
+
+    return prediction_mask
