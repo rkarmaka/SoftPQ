@@ -20,8 +20,8 @@ SoftPQ addresses this by:
 
 ## Installation
 ```python
-git clone https://github.com/yourusername/softpq.git
-cd softpq
+git clone https://github.com/rkarmaka/SoftPQ
+cd SoftPQ
 pip install -r requirements.txt
 ```
 
