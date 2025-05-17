@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from skimage.measure import label
 import metrics.core as metrics
+from metrics.softpq import SoftPQ
 import metrics.utils as utils
 import data.synthetic_cases as synthetic_cases
 from data.synthetic_cases import relabel_segments_fixed_groups
@@ -69,8 +70,9 @@ def evaluate_oversegmentation_effect(
 
         # SoftPQ for different IoU lows
         for iou_low in iou_low_values:
-            SoftPQ = metrics._proposed_sqrt(ground_truth, predicted_labels, iou_high=iou_high, iou_low=iou_low)
-            SoftPQ_curves[round(iou_low, 2)].append(SoftPQ)
+            softpq = SoftPQ(iou_high=iou_high, iou_low=iou_low)
+            softpq_score = softpq.evaluate(ground_truth, predicted_labels)
+            SoftPQ_curves[round(iou_low, 2)].append(softpq_score)
 
     # Plot
     plt.rcParams.update({

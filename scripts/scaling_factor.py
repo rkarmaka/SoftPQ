@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from skimage.measure import label
 import metrics.core as metrics
+from metrics.softpq import SoftPQ
 import metrics.utils as utils
 import data.synthetic_cases as synthetic_cases
 from data.synthetic_cases import relabel_segments_fixed_groups
@@ -34,9 +35,9 @@ def evaluate_oversegmentation_effect(
 
 
     pq_values = []
-    SoftPQ_values = []
-    SoftPQ_log_values = []
-    SoftPQ_linear_values = []
+    softpq_values = []
+    softpq_log_values = []
+    softpq_linear_values = []
 
     for k in k_range:
         # Create oversegmented prediction
@@ -45,16 +46,19 @@ def evaluate_oversegmentation_effect(
 
         # Evaluate PQ and SoftPQ
         pq = metrics.evaluate_segmentation(ground_truth_labels, predicted_labels)['panoptic_quality']
-        SoftPQ = metrics._proposed_sqrt(ground_truth_labels, predicted_labels, iou_high=iou_high, iou_low=iou_low)
-        SoftPQ_log = metrics._proposed_log(ground_truth_labels, predicted_labels, iou_high=iou_high, iou_low=iou_low)
-        SoftPQ_linear = metrics._proposed_linear(ground_truth_labels, predicted_labels, iou_high=iou_high, iou_low=iou_low)
+        softpq = SoftPQ(iou_high=iou_high, iou_low=iou_low, method='sqrt')
+        softpq_log = SoftPQ(iou_high=iou_high, iou_low=iou_low, method='log')
+        softpq_linear = SoftPQ(iou_high=iou_high, iou_low=iou_low, method='linear')
+        
+        softpq_score = softpq.evaluate(ground_truth_labels, predicted_labels)
+        softpq_log_score = softpq_log.evaluate(ground_truth_labels, predicted_labels)
+        softpq_linear_score = softpq_linear.evaluate(ground_truth_labels, predicted_labels)
 
         pq_values.append(pq)
-        SoftPQ_values.append(SoftPQ)
-        SoftPQ_log_values.append(SoftPQ_log)
-        SoftPQ_linear_values.append(SoftPQ_linear)
+        softpq_values.append(softpq_score)
+        softpq_log_values.append(softpq_log_score)
+        softpq_linear_values.append(softpq_linear_score)
     
-    print(SoftPQ_log_values)
 
     # Plot
     plt.rcParams.update({
@@ -77,9 +81,9 @@ def evaluate_oversegmentation_effect(
 
     # LEFT: PQ and SoftPQ
     ax_left.plot(k_range, pq_values, label='PQ (IoU > 0.5)', color='black', linestyle='-', linewidth=2.5)
-    ax_left.plot(k_range, SoftPQ_values, label=f'SoftPQ Square Root Penalty (IoU 0.5–{iou_low})', linestyle='--', marker='o', color='#d62728', alpha=0.9)
-    ax_left.plot(k_range, SoftPQ_log_values, label=f'SoftPQ Log Penalty (IoU 0.5–{iou_low})', linestyle='--', marker='o', color='#1f77b4', alpha=0.9)
-    ax_left.plot(k_range, SoftPQ_linear_values, label=f'SoftPQ Linear Penalty (IoU 0.5–{iou_low})', linestyle='--', marker='o', color='#ff7f0e', alpha=0.9)
+    ax_left.plot(k_range, softpq_values, label=f'SoftPQ Square Root Penalty (IoU 0.5–{iou_low})', linestyle='--', marker='o', color='#d62728', alpha=0.9)
+    ax_left.plot(k_range, softpq_log_values, label=f'SoftPQ Log Penalty (IoU 0.5–{iou_low})', linestyle='--', marker='o', color='#1f77b4', alpha=0.9)
+    ax_left.plot(k_range, softpq_linear_values, label=f'SoftPQ Linear Penalty (IoU 0.5–{iou_low})', linestyle='--', marker='o', color='#ff7f0e', alpha=0.9)
 
     k = k_range[0]
     ax_left.set_title(f'Effect of Oversegmentation on PQ and SoftPQ')

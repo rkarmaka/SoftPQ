@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 from skimage.measure import label
 import metrics.core as metrics
+from metrics.softpq import SoftPQ
 import metrics.utils as utils
 import data.synthetic_cases as synthetic_cases
 from data.synthetic_cases import relabel_segments_fixed_groups, create_multi_circle_image, simulate_incremental_oversegmentation
@@ -41,12 +42,13 @@ def evaluate_oversegmentation_effect(
 
         # Evaluate PQ and SoftPQ
         pq = metrics.evaluate_segmentation(ground_truth_labels, predicted_labels)['panoptic_quality']
-        SoftPQ = metrics._proposed_sqrt(ground_truth_labels, predicted_labels, iou_high=iou_high, iou_low=iou_low)
+        softpq = SoftPQ(iou_high=iou_high, iou_low=iou_low)
+        softpq_score = softpq.evaluate(ground_truth_labels, predicted_labels)
         f1 = metrics.evaluate_segmentation(ground_truth_labels, predicted_labels)['f1']
         mAP = metrics.average_precision(ground_truth_labels, predicted_labels)[0].mean()
 
         pq_values.append(pq)
-        SoftPQ_values.append(SoftPQ)
+        SoftPQ_values.append(softpq_score)
         f1_values.append(f1)
         mAP_values.append(mAP)
     

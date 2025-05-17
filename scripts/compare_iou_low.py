@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import metrics.core as metrics
+from metrics.softpq import SoftPQ
 import metrics.utils as utils
 import data.synthetic_cases as synthetic_cases
 from skimage.measure import label
@@ -40,8 +41,9 @@ def get_pq_softpq_data(operation, data_case, iou_high, iou_low_range, num_iterat
         SoftPQ_values = []
         for _ in range(num_iterations):
             predicted_mask_copy_labels = label(predicted_mask_copy)
-            SoftPQ = metrics._proposed_sqrt(ground_truth_labels, predicted_mask_copy_labels, iou_high=iou_high, iou_low=iou_low)
-            SoftPQ_values.append(SoftPQ)
+            softpq = SoftPQ(iou_high=iou_high, iou_low=iou_low)
+            softpq_score = softpq.evaluate(ground_truth_labels, predicted_mask_copy_labels)
+            SoftPQ_values.append(softpq_score)
             predicted_mask_copy = utils.erode_dilate_mask(predicted_mask_copy, operation=operation, kernel_size=1)
         SoftPQ_curves[round(iou_low, 2)] = SoftPQ_values
 
@@ -121,4 +123,4 @@ def plot_side_by_side_panels(data_case='paired_circles', output_dir='output/figu
 
 
 if __name__ == '__main__':
-    plot_side_by_side_panels(data_case='paired_circles', output_filename='combined_spq_panels_low_iou_paired_circles.png')
+    plot_side_by_side_panels(data_case='paired_circles', output_filename='combined_spq_panels_low_iou_paired_circles_2.png')

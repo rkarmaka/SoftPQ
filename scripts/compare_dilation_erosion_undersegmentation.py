@@ -7,6 +7,7 @@ sys.path.append(os.path.abspath(""))
 import matplotlib.pyplot as plt
 import pandas as pd
 import metrics.core as metrics
+from metrics.softpq import SoftPQ
 import metrics.utils as utils
 import data.synthetic_cases as synthetic_cases
 
@@ -29,7 +30,8 @@ def run_progressive_segmentation(
     scores = []
     for i in range(1, num_iterations + 1):
         score = metrics.evaluate_segmentation(ground_truth, predicted_mask, thresh=iou_threshold)
-        pq_modified = metrics._proposed_sqrt(ground_truth, predicted_mask)
+        softpq = SoftPQ()
+        pq_modified = softpq.evaluate(ground_truth, predicted_mask)
         mAP = metrics.average_precision(ground_truth, predicted_mask)[0].mean()
 
         scores.append({

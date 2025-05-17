@@ -7,6 +7,7 @@ sys.path.append(os.path.abspath(""))
 import matplotlib.pyplot as plt
 import pandas as pd
 import metrics.core as metrics
+import metrics.softpq as softpq
 import metrics.utils as utils
 
 def plot_pq_vs_pqstar(df, output_path='pq_vs_softpq_scatter.png'):
