@@ -14,7 +14,7 @@ from data.synthetic_cases import relabel_segments_fixed_groups
 
 
 def evaluate_oversegmentation_effect(
-    k_range=range(10,0,-1),
+    k_range=range(10, 0, -1),
     data_case='single_circle',
     iou_high=0.5,
     iou_low=0.1,
@@ -27,11 +27,10 @@ def evaluate_oversegmentation_effect(
     if data_case == 'single_circle':
         circle_mask = synthetic_cases.create_circle_mask((256, 256), 32)
         base_mask = synthetic_cases.create_n_oversegments_from_circle(circle_mask, n=10, offset=10)
-        ground_truth = (base_mask>0).astype(np.uint8)
-        ground_truth_labels = label(ground_truth)
+        ground_truth = (base_mask > 0).astype(np.uint8)
+        ground_truth_labels = label(ground_truth, connectivity=1)
     else:
         raise ValueError(f"Unknown data_case: {data_case}")
-
 
     pq_values = []
     SoftPQ_values = []
@@ -41,9 +40,9 @@ def evaluate_oversegmentation_effect(
     for k in k_range:
         # Create oversegmented prediction
         predicted = relabel_segments_fixed_groups(base_mask, k)
-        predicted_labels = label(predicted)
+        predicted_labels = label(predicted, connectivity=1)
 
-        # Evaluate PQ and SoftPQ
+        # Evaluate PQ and SoftPQ variants
         pq = metrics.evaluate_segmentation(ground_truth_labels, predicted_labels)['panoptic_quality']
         SoftPQ = metrics._proposed_sqrt(ground_truth_labels, predicted_labels, iou_high=iou_high, iou_low=iou_low)
         SoftPQ_log = metrics._proposed_log(ground_truth_labels, predicted_labels, iou_high=iou_high, iou_low=iou_low)
@@ -53,12 +52,12 @@ def evaluate_oversegmentation_effect(
         SoftPQ_values.append(SoftPQ)
         SoftPQ_log_values.append(SoftPQ_log)
         SoftPQ_linear_values.append(SoftPQ_linear)
-    
-    print(SoftPQ_log_values)
 
-    # Plot
+    print("[DEBUG] SoftPQ Log values:", SoftPQ_log_values)
+
+    # Plotting setup
     plt.rcParams.update({
-        'font.family': 'Times New Roman', 
+        'font.family': 'Times New Roman',
         'font.size': 12,
         'figure.figsize': (10, 6),
         'axes.labelsize': 14,
@@ -75,48 +74,38 @@ def evaluate_oversegmentation_effect(
 
     fig, (ax_left, ax_right) = plt.subplots(1, 2, figsize=(14, 6), sharex=False)
 
-    # LEFT: PQ and SoftPQ
+    # LEFT PLOT: PQ and SoftPQ metrics vs oversegmentation factor
     ax_left.plot(k_range, pq_values, label='PQ (IoU > 0.5)', color='black', linestyle='-', linewidth=2.5)
-    ax_left.plot(k_range, SoftPQ_values, label=f'SoftPQ Square Root Penalty (IoU 0.5–{iou_low})', linestyle='--', marker='o', color='#d62728', alpha=0.9)
-    ax_left.plot(k_range, SoftPQ_log_values, label=f'SoftPQ Log Penalty (IoU 0.5–{iou_low})', linestyle='--', marker='o', color='#1f77b4', alpha=0.9)
-    ax_left.plot(k_range, SoftPQ_linear_values, label=f'SoftPQ Linear Penalty (IoU 0.5–{iou_low})', linestyle='--', marker='o', color='#ff7f0e', alpha=0.9)
+    ax_left.plot(k_range, SoftPQ_values, label=f'SoftPQ Square Root Scaling (IoU {iou_low}–{iou_high})',
+                 linestyle='--', marker='o', color='#d62728', alpha=0.9)
+    ax_left.plot(k_range, SoftPQ_log_values, label=f'SoftPQ Log Scaling (IoU {iou_low}–{iou_high})',
+                 linestyle='--', marker='o', color='#1f77b4', alpha=0.9)
+    ax_left.plot(k_range, SoftPQ_linear_values, label=f'SoftPQ Linear Scaling (IoU {iou_low}–{iou_high})',
+                 linestyle='--', marker='o', color='#ff7f0e', alpha=0.9)
 
-    k = k_range[0]
-    ax_left.set_title(f'Effect of Oversegmentation on PQ and SoftPQ')
-    ax_left.set_xlabel(f'Number of Oversegments')
+    ax_left.set_title('Effect of Oversegmentation on PQ and SoftPQ')
+    ax_left.set_xlabel('Number of Oversegments')
     ax_left.set_ylabel('Score')
     ax_left.legend(loc='upper right')
 
-    # RIGHT: Penalty Functions (plotted vs x but evaluated as x+1)
-    x_vals = np.linspace(0, max(k_range), 11)
-    x_plot = x_vals+1  # This is for axis (starts at 0)
-    x_eval = x_vals + 1  # This is for function computation (starts at 1)
+    # RIGHT PLOT: Scaling functions
+    x_vals = np.linspace(1.1, 10, 100)  # start from 1.1 to avoid log(1) = 0
+    x_plot = x_vals
 
-    x_eval_log = np.maximum(1.0, np.log(x_eval))
-    ax_right.plot(x_plot, 1 / x_eval_log, label='max(1, 1 / log(n + 1))', color='#1f77b4', linestyle='--')
-    ax_right.plot(x_plot, 1 / np.sqrt(x_eval), label='1 / sqrt(n + 1)', color='#d62728', linestyle='--')
-    ax_right.plot(x_plot, 1 / (x_eval), label='1 / (n + 1)', color='#ff7f0e', linestyle='--')
+    ax_right.plot(x_plot, 1 / np.log(x_plot), label='1 / log(n)', color='#1f77b4', linestyle='--')
+    ax_right.plot(x_plot, 1 / np.sqrt(x_plot), label='1 / sqrt(n)', color='#d62728', linestyle='--')
+    ax_right.plot(x_plot, 1 / x_plot, label='1 / n', color='#ff7f0e', linestyle='--')
 
-    ax_right.set_title('Penalty Functions vs n (where y = 1/f(n + 1))')
+    ax_right.set_title('Scaling Functions vs n (where y = 1/f(n))')
     ax_right.set_xlabel('n')
-    ax_right.set_ylabel('Penalty Factor')
-    ax_right.set_xlim(0, max(k_range)+0.5)
-    # ax_right.set_ylim(0, 1.5)
+    ax_right.set_ylabel('Scaling Value')
+    ax_right.set_xlim(0, 10)
     ax_right.legend(loc='upper right')
-
-    # # Shared Legend
-    # fig.legend(
-    #     handles=ax_left.lines + ax_right.lines,
-    #     labels=[line.get_label() for line in ax_left.lines + ax_right.lines],
-    #     loc='lower center',
-    #     ncol=4,
-    #     bbox_to_anchor=(0.5, 0)
-    # )
 
     plt.tight_layout()
     plt.subplots_adjust(bottom=0.25)
 
-    # Save with metadata
+    # Save figure with metadata
     metadata = {
         'Title': 'Oversegmentation k Robustness',
         'Author': 'Ranit Karmakar',
@@ -131,12 +120,11 @@ def evaluate_oversegmentation_effect(
     print(f"[✓] Plot saved to: {save_path}")
 
 
-
 if __name__ == '__main__':
     evaluate_oversegmentation_effect(
-        k_range=range(10,0,-1),
+        k_range=range(10, 0, -1),
         data_case='single_circle',
         iou_high=0.5,
         iou_low=0.05,
-        output_filename='penalty_factor_effect.png'
+        output_filename='scaling_factor_effect_2.png'
     )

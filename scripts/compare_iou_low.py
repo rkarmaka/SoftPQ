@@ -12,17 +12,7 @@ import metrics.utils as utils
 import data.synthetic_cases as synthetic_cases
 from skimage.measure import label
 
-def compare_pq_vs_gpq_varying_iou_low(
-    operation='dilate',
-    data_case='single_circle',
-    iou_high=0.5,
-    iou_low_range=np.arange(0.5, 0.0, -0.05),
-    num_iterations=24,
-    output_dir='output/figures',
-    output_filename='pq_vs_gpq_varying_ioulow.png'
-):
-    os.makedirs(output_dir, exist_ok=True)
-
+def get_pq_softpq_data(operation, data_case, iou_high, iou_low_range, num_iterations):
     # Load synthetic test case
     if data_case == 'single_circle':
         ground_truth = synthetic_cases.create_circle_mask((256, 256), 32)
@@ -43,23 +33,36 @@ def compare_pq_vs_gpq_varying_iou_low(
         pq_values.append(pq)
         predicted_mask_copy = utils.erode_dilate_mask(predicted_mask_copy, operation=operation, kernel_size=1)
 
-    # Evaluate gPQ for each iou_low
-    gpq_curves = {}
+    # Evaluate SoftPQ
+    SoftPQ_curves = {}
     for iou_low in iou_low_range:
         predicted_mask_copy = predicted_mask.copy()
-        gpq_values = []
+        SoftPQ_values = []
         for _ in range(num_iterations):
             predicted_mask_copy_labels = label(predicted_mask_copy)
-            gpq = metrics._proposed_sqrt(ground_truth_labels, predicted_mask_copy_labels, iou_high=iou_high, iou_low=iou_low)
-            gpq_values.append(gpq)
+            SoftPQ = metrics._proposed_sqrt(ground_truth_labels, predicted_mask_copy_labels, iou_high=iou_high, iou_low=iou_low)
+            SoftPQ_values.append(SoftPQ)
             predicted_mask_copy = utils.erode_dilate_mask(predicted_mask_copy, operation=operation, kernel_size=1)
-        gpq_curves[round(iou_low, 2)] = gpq_values
+        SoftPQ_curves[round(iou_low, 2)] = SoftPQ_values
 
-    # Plot Setup
+    return pq_values, SoftPQ_curves
+
+
+def plot_side_by_side_panels(data_case='paired_circles', output_dir='output/figures', output_filename='combined_spq_panels.png'):
+    os.makedirs(output_dir, exist_ok=True)
+
+    iou_low_range = np.arange(0.5, 0.0, -0.05)
+    num_iterations = 24
+    iou_high = 0.5
+
+    operations = ['erode', 'dilate']
+    titles = ['Erosion: PQ vs SoftPQ', 'Dilation: PQ vs SoftPQ']
+
+    # Set up plot
     plt.rcParams.update({
         'font.family': 'Times New Roman',
         'font.size': 12,
-        'figure.figsize': (10, 6),
+        'figure.figsize': (14, 6),
         'axes.labelsize': 14,
         'axes.titlesize': 14,
         'legend.fontsize': 10,
@@ -72,53 +75,50 @@ def compare_pq_vs_gpq_varying_iou_low(
         'legend.frameon': False
     })
 
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.plot(pq_values, label='PQ (IoU > 0.5)', color='black', linestyle='-', linewidth=2.5)
-
-    for iou_low, values in gpq_curves.items():
-        l = f"gPQ (IoU 0.5–{iou_low:.2f})"
-        ax.plot(values, label=l, linestyle='--', marker='.', alpha=0.8)
-
-    ax.set_title('PQ vs gPQ with Varying IoU Low Thresholds')
-    ax.set_xlabel('Iteration')
-    ax.set_ylabel('Score')
     
-    # Move legend below plot
-    ax.legend(
-        handles=ax.lines,
-        labels=[line.get_label() for line in ax.lines],
-        loc='lower center',
-        ncol=4,
-        bbox_to_anchor=(0.5, -0.35)
-    )
+
+    fig, axes = plt.subplots(1, 2, sharey=True)
+
+    for i, operation in enumerate(operations):
+        ax = axes[i]
+        pq_vals, spq_curves = get_pq_softpq_data(
+            operation=operation,
+            data_case=data_case,
+            iou_high=iou_high,
+            iou_low_range=iou_low_range,
+            num_iterations=num_iterations
+        )
+
+        ax.plot(pq_vals, label='PQ (IoU > 0.5)', color='black', linestyle='-', linewidth=2.5)
+        for iou_low, values in spq_curves.items():
+            label_str = f"SoftPQ (IoU 0.5–{iou_low:.2f})"
+            ax.plot(values, label=label_str, linestyle='--', marker='.', alpha=0.8)
+
+        ax.set_title(titles[i])
+        ax.set_xlabel('Iteration')
+        if i == 0:
+            ax.set_ylabel('Score')
+
+    # Shared legend
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc='lower center', ncol=6, bbox_to_anchor=(0.5, 0))
 
     plt.tight_layout()
-    plt.subplots_adjust(bottom=0.25)
+    plt.subplots_adjust(bottom=0.2)
 
-
-    # Save with metadata
-    metadata = {
-        'Title': 'PQ vs gPQ Robustness',
-        'Author': 'Ranit Karmakar',
-        'Description': f'Comparison of Panoptic Quality vs Generalized PQ using varying IoU low thresholds ({operation})',
-        'Keywords': 'segmentation, PQ, gPQ, iou_low, robustness'
-    }
+    # Save figure
     save_path = os.path.join(output_dir, output_filename)
+    metadata = {
+        'Title': 'PQ vs SoftPQ Side-by-Side Comparison',
+        'Author': 'Ranit Karmakar',
+        'Description': 'Left: Erosion. Right: Dilation. SoftPQ with varying IoU low thresholds',
+        'Keywords': 'segmentation, PQ, SoftPQ, erosion, dilation, IoU'
+    }
     fig.savefig(save_path, dpi=300, metadata=metadata)
     plt.close(fig)
 
-    print(f"[✓] Plot saved to: {save_path}")
+    print(f"[✓] Combined plot saved to: {save_path}")
 
 
 if __name__ == '__main__':
-    compare_pq_vs_gpq_varying_iou_low(
-        operation='erode',  # or 'erode'
-        data_case='paired_circles',
-        output_filename='spq_erosion_low_iou.png'
-    )
-
-    compare_pq_vs_gpq_varying_iou_low(
-        operation='dilate',
-        data_case='paired_circles',
-        output_filename='spq_dilation_low_iou.png'
-    )
+    plot_side_by_side_panels(data_case='paired_circles', output_filename='combined_spq_panels_low_iou_paired_circles.png')

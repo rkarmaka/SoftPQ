@@ -59,18 +59,18 @@ def evaluate_dilation_robustness(
     scores_df = pd.DataFrame(scores)
 
     # Define plot setup
-    metric_order = ['F1 Score', 'mAP', 'Panoptic Quality', 'gPQ']
+    metric_order = ['F1 Score', 'mAP', 'Panoptic Quality', 'SoftPQ']
     metrics_to_plot = {
         'F1 Score': scores_df.f1,
         'mAP': scores_df.mAP,
         'Panoptic Quality': scores_df.panoptic_quality,
-        'gPQ': scores_df.pq_modified
+        'SoftPQ': scores_df.pq_modified
     }
     custom_colors = {
         'F1 Score': '#1f77b4',
         'mAP': '#ff7f0e',
         'Panoptic Quality': '#2ca02c',
-        'gPQ': '#d62728'
+        'SoftPQ': '#d62728'
     }
 
     plt.rcParams.update({

@@ -30,7 +30,7 @@ def evaluate_oversegmentation_effect(
 
 
     pq_values = []
-    gpq_values = []
+    SoftPQ_values = []
     f1_values = []
     mAP_values = []
 
@@ -39,14 +39,14 @@ def evaluate_oversegmentation_effect(
         predicted = simulate_incremental_oversegmentation(base_mask, k)
         predicted_labels = label(predicted)
 
-        # Evaluate PQ and gPQ
+        # Evaluate PQ and SoftPQ
         pq = metrics.evaluate_segmentation(ground_truth_labels, predicted_labels)['panoptic_quality']
-        gpq = metrics._proposed_sqrt(ground_truth_labels, predicted_labels, iou_high=iou_high, iou_low=iou_low)
+        SoftPQ = metrics._proposed_sqrt(ground_truth_labels, predicted_labels, iou_high=iou_high, iou_low=iou_low)
         f1 = metrics.evaluate_segmentation(ground_truth_labels, predicted_labels)['f1']
         mAP = metrics.average_precision(ground_truth_labels, predicted_labels)[0].mean()
 
         pq_values.append(pq)
-        gpq_values.append(gpq)
+        SoftPQ_values.append(SoftPQ)
         f1_values.append(f1)
         mAP_values.append(mAP)
     
@@ -55,10 +55,10 @@ def evaluate_oversegmentation_effect(
     x_percent = np.array(k_range) / total_objects * 100
 
     # Convert scores to percentages
-    pq_array = np.array(pq_values) * 100
-    gpq_array = np.array(gpq_values) * 100
-    f1_array = np.array(f1_values) * 100
-    mAP_array = np.array(mAP_values) * 100
+    pq_array = np.array(pq_values)
+    SoftPQ_array = np.array(SoftPQ_values)
+    f1_array = np.array(f1_values)
+    mAP_array = np.array(mAP_values)
 
     plt.rcParams.update({
         'font.family': 'Times New Roman', 
@@ -78,24 +78,24 @@ def evaluate_oversegmentation_effect(
 
     fig, ax = plt.subplots(figsize=(10, 6))
 
-    # Fill between PQ and gPQ (now in percentage)
-    ax.fill_between(x_percent, np.minimum(pq_array, gpq_array), np.maximum(pq_array, gpq_array),
-                    color='lightgray', alpha=0.4, label='Gap between PQ and gPQ')
+    # Fill between PQ and SoftPQ (now in percentage)
+    ax.fill_between(x_percent, np.minimum(pq_array, SoftPQ_array), np.maximum(pq_array, SoftPQ_array),
+                    color='lightgray', alpha=0.4, label='Gap between PQ and SoftPQ')
 
     # Replot lines
     ax.plot(x_percent, pq_array, label='PQ (IoU > 0.5)', color='black', linestyle='-', linewidth=2.5)
-    ax.plot(x_percent, gpq_array, label=f'gPQ (IoU 0.5–{iou_low})', linestyle='--', marker='o', color='#d62728', alpha=0.9)
+    ax.plot(x_percent, SoftPQ_array, label=f'SoftPQ (IoU 0.5–{iou_low})', linestyle='--', marker='o', color='#d62728', alpha=0.9)
     ax.plot(x_percent, mAP_array, label='mAP', linestyle='--', marker='o', color='#1f77b4', alpha=0.9)
     ax.plot(x_percent, f1_array, label='F1', linestyle='--', marker='o', color='#ff7f0e', alpha=0.9)
 
     ax.set_title('Effect of Oversegmentation on Segmentation Quality')
     ax.set_xlabel('Oversegmentation (% of objects)')
-    ax.set_ylabel('Score (%)')
-    ax.set_ylim(0, 110)
+    ax.set_ylabel('Score')
+    ax.set_ylim(0, 1.1)
 
     # Legend (include shaded area)
     from matplotlib.patches import Patch
-    gap_patch = Patch(facecolor='lightgray', edgecolor='gray', alpha=0.4, label='Gap between PQ and gPQ')
+    gap_patch = Patch(facecolor='lightgray', edgecolor='gray', alpha=0.4, label='Gap between PQ and SoftPQ')
 
     fig.legend(
         handles=[*ax.lines, gap_patch],
@@ -113,8 +113,8 @@ def evaluate_oversegmentation_effect(
     metadata = {
         'Title': 'Oversegmentation k Robustness',
         'Author': 'Ranit Karmakar',
-        'Description': f'Evaluates the effect of varying number of segments (k) on PQ and gPQ (IoU high = {iou_high}, low = {iou_low})',
-        'Keywords': 'segmentation, oversegmentation, PQ, gPQ, robustness, k-split'
+        'Description': f'Evaluates the effect of varying number of segments (k) on PQ and SoftPQ (IoU high = {iou_high}, low = {iou_low})',
+        'Keywords': 'segmentation, oversegmentation, PQ, SoftPQ, robustness, k-split'
     }
 
     save_path = os.path.join(output_dir, output_filename)

@@ -74,8 +74,8 @@ def compare_erosion_dilation_plot():
 
     # Metric selection and color
     metrics_to_plot = ['panoptic_quality', 'pq_modified']
-    display_names = {'panoptic_quality': 'PQ', 'pq_modified': 'gPQ'}
-    colors = {'PQ': '#2ca02c', 'gPQ': '#d62728'}
+    display_names = {'panoptic_quality': 'PQ', 'pq_modified': 'SoftPQ'}
+    colors = {'PQ': '#2ca02c', 'SoftPQ': '#d62728'}
 
     # Dilation plot
     for m in metrics_to_plot:
@@ -110,7 +110,7 @@ def compare_erosion_dilation_plot():
     metadata = {
         'Title': 'Dilation vs Erosion - Undersegmentation Comparison',
         'Author': 'Ranit Karmakar',
-        'Description': 'Comparison of PQ and gPQ under progressive dilation and erosion to evaluate robustness under under- and oversegmentation',
+        'Description': 'Comparison of PQ and SoftPQ under progressive dilation and erosion to evaluate robustness under under- and oversegmentation',
         'Keywords': 'segmentation, evaluation, panoptic quality, dilation, erosion, robustness'
     }
     save_path = os.path.join(output_dir, 'comparison_undersegmentation.png')

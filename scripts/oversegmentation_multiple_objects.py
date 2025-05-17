@@ -49,7 +49,7 @@ def evaluate_oversegmentation_effect(
     pq_values = []
     f1_values = []
     map_values = []
-    gpq_curves = {round(l, 2): [] for l in iou_low_values}
+    SoftPQ_curves = {round(l, 2): [] for l in iou_low_values}
 
     for k in k_range:
         oversegmented = synthetic_cases.create_n_oversegments_from_circle(base_mask, n=k, offset=10)
@@ -67,10 +67,10 @@ def evaluate_oversegmentation_effect(
         f1_values.append(f1)
         map_values.append(mAP)
 
-        # gPQ for different IoU lows
+        # SoftPQ for different IoU lows
         for iou_low in iou_low_values:
-            gpq = metrics._proposed_sqrt(ground_truth, predicted_labels, iou_high=iou_high, iou_low=iou_low)
-            gpq_curves[round(iou_low, 2)].append(gpq)
+            SoftPQ = metrics._proposed_sqrt(ground_truth, predicted_labels, iou_high=iou_high, iou_low=iou_low)
+            SoftPQ_curves[round(iou_low, 2)].append(SoftPQ)
 
     # Plot
     plt.rcParams.update({
@@ -96,12 +96,12 @@ def evaluate_oversegmentation_effect(
     ax.plot(k_range, f1_values, label='F1 Score', linestyle=':', marker='x', color='#1f77b4')
     ax.plot(k_range, map_values, label='mAP', linestyle='-.', marker='o', color='#ff7f0e')
 
-    # gPQ curves
-    for iou_low, values in gpq_curves.items():
-        label_str = f"gPQ (IoU 0.5–{iou_low:.2f})"
+    # SoftPQ curves
+    for iou_low, values in SoftPQ_curves.items():
+        label_str = f"SoftPQ (IoU 0.5–{iou_low:.2f})"
         ax.plot(k_range, values, label=label_str, linestyle='--', marker='.', alpha=0.8)
 
-    ax.set_title('Effect of Oversegmentation (k) on PQ, gPQ, F1, and mAP')
+    ax.set_title('Effect of Oversegmentation (k) on PQ, SoftPQ, F1, and mAP')
     ax.set_xlabel('Number of Oversegments (k)')
     ax.set_ylabel('Score')
 
@@ -120,8 +120,8 @@ def evaluate_oversegmentation_effect(
     metadata = {
         'Title': 'Oversegmentation Metric Robustness',
         'Author': 'Ranit Karmakar',
-        'Description': 'Evaluates PQ, gPQ (varied IoU low), F1, and mAP under increasing oversegmentation (k)',
-        'Keywords': 'segmentation, oversegmentation, PQ, gPQ, F1, mAP, robustness'
+        'Description': 'Evaluates PQ, SoftPQ (varied IoU low), F1, and mAP under increasing oversegmentation (k)',
+        'Keywords': 'segmentation, oversegmentation, PQ, SoftPQ, F1, mAP, robustness'
     }
 
     save_path = os.path.join(output_dir, output_filename)

@@ -1,3 +1,3 @@
-<!-- Env name: gpq-env -->
-# gPQ
+<!-- Env name: SoftPQ-env -->
+# SoftPQ
 Generalized PQ
