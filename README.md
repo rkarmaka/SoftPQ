@@ -27,7 +27,7 @@ pip install -r requirements.txt
 
 ## Usage
 ```python
-from softpq import SoftPQ
+from metrics.softpq import SoftPQ
 
 metric = SoftPQ(iou_high=0.5, iou_low=0.05, method='sqrt')
 score = metric.evaluate(ground_truth_mask, predicted_mask)
