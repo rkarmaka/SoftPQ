@@ -22,7 +22,7 @@ SoftPQ addresses this by:
 ```python
 git clone https://github.com/rkarmaka/SoftPQ
 cd SoftPQ
-pip install -r requirements.txt
+pip install .
 ```
 
 ## Usage
