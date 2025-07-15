@@ -1,7 +1,8 @@
 def main():
     from metrics.softpq import SoftPQ
-    import data.synthetic_cases as synthetic_cases
-    true_mask, pred_mask = synthetic_cases.create_paired_circles((256, 256), (32, 16), shift_x=25)
+    from data import synthetic_cases
+    true_mask = synthetic_cases.create_circle_mask((256, 256), 32)
+    pred_mask = synthetic_cases.create_circle_mask((256, 256), 32, center=(125, 125))
     softpq = SoftPQ(iou_high=0.5, iou_low=0.1)
     score = softpq.evaluate(true_mask, pred_mask)
     print("SoftPQ Score:", score)
